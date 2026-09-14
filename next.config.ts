@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Build enxuto para rodar em container (VPS). Na Vercel é ignorado.
+  output: "standalone",
 };
 
 export default nextConfig;

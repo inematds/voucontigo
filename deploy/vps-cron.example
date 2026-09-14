@@ -1,0 +1,5 @@
+# /etc/cron.d/voucontigo — substitui os crons da Vercel quando o app roda na VPS.
+# Troque CRON_SECRET pelo valor do .env e o domínio pelo real.
+CRON_TZ=America/Sao_Paulo
+0 7 * * *  root curl -fsS -H "Authorization: Bearer CRON_SECRET" https://voucontigo.inema.club/api/cron/lembretes   >/dev/null
+0 * * * *  root curl -fsS -H "Authorization: Bearer CRON_SECRET" https://voucontigo.inema.club/api/cron/lembrete-2h >/dev/null

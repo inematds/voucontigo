@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vou Contigo — a plataforma do acompanhamento que a família confia</title>
+<meta name="description" content="Vou Contigo: serviço de acompanhamento e apoio à rotina de pessoas mais velhas. Landing, painel, execução de atendimento com métricas de preço, relatório de WhatsApp copiável e bot de Telegram para a gestão.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0c10; --bg2:#14141b; --card:#16161e; --line:#272730;
+    --txt:#e9e9ee; --mut:#9a9aa6; --amb:#E2A23B; --amb2:#f0c070; --sky:#38bdf8; --pro:#cbd5e1;
+    color-scheme:dark;
+  }
+  body.light{
+    --bg:#f6f7f9; --bg2:#eceef2; --card:#ffffff; --line:#e1e3ea;
+    --txt:#1a1a22; --mut:#5b5b68; --amb:#b9791d; --amb2:#a16207; --sky:#0369a1; --pro:#b45309;
+    color-scheme:light;
+  }
+  body.light .hero .glow{opacity:.5}
+  body.light pre{background:#0e0e14;color:#d6d6e0}
+  body.light pre .c{color:#8a8a98}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.65 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:Sora,sans-serif;line-height:1.15;margin:0}
+  a{color:var(--amb);text-decoration:none}
+  code,pre{font-family:"JetBrains Mono",monospace}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 22px}
+  .mut{color:var(--mut)} .amb{color:var(--amb)}
+  .chip{display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amb);font-weight:600;font-family:Sora}
+  nav{position:sticky;top:0;z-index:30;backdrop-filter:blur(12px);background:rgba(12,12,16,.78);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:22px;height:60px}
+  nav .brand{display:flex;align-items:center;gap:8px;font-family:Sora;font-weight:800;letter-spacing:-.02em;color:var(--amb)}
+  nav .brand .emoji{font-size:1.25rem}
+  nav .sep{color:var(--mut);opacity:.45}
+  nav .inema{color:var(--sky);font-weight:600;font-size:.88rem;font-family:Sora}
+  nav .inema:hover{filter:brightness(1.15)}
+  nav .pro{color:var(--pro);font-weight:600;font-size:.88rem;font-family:Sora}
+  nav .pro:hover{filter:brightness(1.15)}
+  nav .clubpro{display:inline-flex;align-items:center;gap:6px}
+  nav .links{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:.92rem}
+  nav .links a.sec{color:var(--mut)} nav .links a.sec:hover{color:var(--txt)}
+  .tgl{background:var(--bg2);border:1px solid var(--line);color:var(--txt);width:38px;height:38px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem}
+  .tgl:hover{border-color:var(--amb)}
+  .btn{display:inline-block;background:var(--amb);color:#1a1206;font-weight:600;padding:.6em 1.05em;border-radius:10px;font-family:Sora}
+  .btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  @media(max-width:760px){nav .links a.sec{display:none}}
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .hero .glow{position:absolute;inset:-40% -20% auto auto;width:70%;height:600px;background:radial-gradient(closest-side,rgba(226,162,59,.22),transparent 70%);pointer-events:none}
+  .hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:74px 22px}
+  .hero h1{font-size:clamp(2.2rem,5vw,3.5rem);font-weight:800;letter-spacing:-.025em}
+  .hero p.lead{font-size:1.18rem;color:var(--mut);margin:1.1em 0 1.6em;max-width:34ch}
+  .hero .cta{display:flex;gap:12px;flex-wrap:wrap}
+  .hero figure{margin:0;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 80px -30px #000}
+  .hero figure img{width:100%;display:block}
+  @media(max-width:780px){.hero .wrap{grid-template-columns:1fr;padding:48px 22px}}
+  section{padding:62px 0;border-bottom:1px solid var(--line)}
+  section h2{font-size:clamp(1.5rem,3.4vw,2.1rem);font-weight:800;letter-spacing:-.02em}
+  section .sub{color:var(--mut);margin:.6em 0 2em;max-width:62ch}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:820px){.g3,.g4{grid-template-columns:1fr 1fr}}
+  @media(max-width:540px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .card h3{font-size:1.05rem;margin-bottom:.4em}
+  .card p{color:var(--mut);font-size:.92rem;margin:0}
+  .num{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:8px;background:rgba(226,162,59,.14);color:var(--amb);font-family:Sora;font-weight:800;font-size:.9rem;margin-bottom:.7em}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .flow span{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:.45em .9em;font-size:.85rem;font-family:Sora;font-weight:600}
+  .flow .arr{color:var(--amb);border:none;background:none;padding:0 .1em}
+  pre{background:#0a0a0e;border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;font-size:.86rem;line-height:1.6;color:#d6d6e0}
+  pre .c{color:#6f6f7c} pre .k{color:var(--amb2)} pre .s{color:#9ece6a}
+  .step{display:grid;grid-template-columns:46px 1fr;gap:16px;margin-bottom:26px}
+  .step .b{width:46px;height:46px;border-radius:12px;background:var(--amb);color:#1a1206;font-family:Sora;font-weight:800;font-size:1.25rem;display:flex;align-items:center;justify-content:center}
+  .step h3{font-size:1.12rem;margin-bottom:.3em}
+  .step p{color:var(--mut);margin:.2em 0 .7em}
+  .ex{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.ex{grid-template-columns:1fr}}
+  .ex figure{margin:0;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+  .ex figure img{width:100%;display:block}
+  .ex figcaption{padding:12px 14px;font-size:.88rem;color:var(--mut);background:var(--card)}
+  .phase{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+  .phase:last-child{border:none}
+  .phase .tag{flex:0 0 92px;font-family:Sora;font-weight:800;color:var(--amb)}
+  .phase .d strong{display:block;margin-bottom:.2em}
+  .phase .d span{color:var(--mut);font-size:.92rem}
+  footer{padding:46px 0;text-align:center;color:var(--mut);font-size:.9rem}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.3em .8em;font-size:.78rem;color:var(--mut);margin:0 4px}
+  table.cmd{width:100%;border-collapse:collapse;font-size:.92rem}
+  table.cmd th,table.cmd td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.cmd th{font-family:Sora;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+  table.cmd td code{color:var(--amb);font-size:.88rem}
+  .tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top"><span class="emoji">💚</span> Vou Contigo</a>
+  <span class="sep">|</span>
+  <span class="clubpro">
+    <a class="inema" href="https://inema.club" target="_blank" rel="noopener">INEMA.CLUB</a>
+    <span class="sep">-</span>
+    <a class="pro" href="https://inema.pro" target="_blank" rel="noopener">PRO</a>
+  </span>
+  <div class="links">
+    <a class="sec" href="#oque">O que é</a>
+    <a class="sec" href="#fluxo">Como funciona</a>
+    <a class="sec" href="#guia">Guia de uso</a>
+    <a class="sec" href="#telegram">Telegram</a>
+    <a class="sec" href="#roadmap">Roadmap</a>
+    <button class="tgl" id="themeToggle" aria-label="Alternar tema" title="Alternar tema">🌙</button>
+    <a class="btn" href="https://github.com/inematds/voucontigo" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top">
+  <div class="glow"></div>
+  <div class="wrap">
+    <div>
+      <span class="chip">Acompanhamento e apoio à rotina</span>
+      <h1>Quando a família não pode estar presente, <span class="amb">nós estamos</span>.</h1>
+      <p class="lead">O Vou Contigo acompanha pessoas mais velhas em consultas, exames, mercado, banco, farmácia e passeios — e avisa a família de tudo. Esta plataforma é o sistema que opera o serviço: agenda, execução, relatório e números para validar o preço.</p>
+      <div class="cta">
+        <a class="btn" href="#guia">Começar o guia</a>
+        <a class="btn ghost" href="https://github.com/inematds/voucontigo" target="_blank" rel="noopener">Ver no GitHub</a>
+      </div>
+    </div>
+    <figure><img src="assets/logo.jpg" alt="Logo Vou Contigo — duas figuras abstratas lado a lado, em verde-oliva e bege"></figure>
+  </div>
+</header>
+
+<section id="oque"><div class="wrap">
+  <span class="chip">O que é</span>
+  <h2>Um caderno digital que tira o negócio do WhatsApp solto — sem tirar o WhatsApp do cliente</h2>
+  <p class="sub">O serviço é vendido para os filhos e familiares que não conseguem estar presentes. A plataforma organiza quem vai ser acompanhado, quando, por quem, quanto custou de verdade, e entrega o relatório do dia pronto para colar no WhatsApp da família.</p>
+  <div class="grid g3">
+    <div class="card"><h3>🗓️ Agenda de verdade</h3><p>Cada atendimento tem cliente, acompanhado, tipo, endereço de saída e destino, horário e um ciclo de estados claro: solicitado → agendado → confirmado → em andamento → concluído → relatado.</p></div>
+    <div class="card"><h3>📊 Preço validado com dado</h3><p>Ao finalizar, o sistema exige hora real, minutos de espera, km rodados, estacionamento, pedágio e nível de esforço. Depois de 10 a 20 atendimentos dá para revisar o preço sem chute.</p></div>
+    <div class="card"><h3>💬 Relatório que a família lê</h3><p>O relatório sai montado no modelo da marca, com botão de copiar para o WhatsApp e marcação de enviado. A gestora acompanha tudo pelo bot de Telegram, do celular.</p></div>
+  </div>
+</div></section>
+
+<section id="paraquem"><div class="wrap">
+  <span class="chip">Para quem é</span>
+  <h2>Três pessoas, três lugares no sistema</h2>
+  <p class="sub">A pessoa acompanhada não precisa de app, login nem celular — só de uma ficha bem feita. Quem usa a plataforma é a família (pelo WhatsApp), a acompanhante (pelo celular) e a gestora (pelo painel e pelo Telegram).</p>
+  <div class="grid g3">
+    <div class="card"><h3>👨‍👩‍👧 Família / pagador</h3><p>Filho, neta ou responsável. Solicita pela landing ou pelo WhatsApp, recebe confirmação, lembrete e o relatório de cada acompanhamento. No MVP tudo pelo WhatsApp, com uma pessoa do outro lado.</p></div>
+    <div class="card"><h3>🚶‍♀️ Acompanhante</h3><p>Quem executa. Usa o painel mobile-first na rua: vê a agenda do dia, aperta Iniciar, aperta Finalizar, preenche espera/km/custos e revisa o relatório. Ou faz o mesmo pelo bot de Telegram.</p></div>
+    <div class="card"><h3>🧭 Gestora</h3><p>Organiza a agenda, aprova solicitações, vende pacotes, cobra e olha as métricas. Recebe cada lead e cada mudança de agenda no Telegram em menos de um minuto.</p></div>
+  </div>
+</div></section>
+
+<section id="fluxo"><div class="wrap">
+  <span class="chip">Como funciona</span>
+  <h2>O atendimento é a unidade do sistema</h2>
+  <p class="sub">WhatsApp, Telegram e painel são canais para agir sobre o atendimento — não são o atendimento. É essa distinção que impede o sistema de virar “um chat com banco de dados”.</p>
+  <div class="flow">
+    <span>Solicitação</span><span class="arr">→</span>
+    <span>Agendamento</span><span class="arr">→</span>
+    <span>Confirmação</span><span class="arr">→</span>
+    <span>Execução (iniciar / finalizar)</span><span class="arr">→</span>
+    <span>Relatório à família</span><span class="arr">→</span>
+    <span>Débito de horas do pacote</span>
+  </div>
+
+  <h2 style="margin-top:44px;font-size:1.3rem">O que a plataforma faz no MVP (v1.0.0)</h2>
+  <p class="sub">Nenhuma automação de WhatsApp: o cliente continua falando com um humano. O que o sistema faz é não deixar nada se perder.</p>
+  <div class="grid g3">
+    <div class="card"><h3>🏠 Landing promocional</h3><p>Uma página mobile-first na paleta do logo: a dor, os serviços, os 3 passos, os planos, quem somos, o que <em>não</em> fazemos, FAQ e o botão fixo de WhatsApp com mensagem pré-preenchida. O formulário curto cria um lead e avisa a gestora no Telegram.</p></div>
+    <div class="card"><h3>🖥️ Painel de controle</h3><p>Login Supabase com papéis gestora e acompanhante. Agenda semana/dia, cadastro de clientes e acompanhados, pacotes e saldo de horas, financeiro manual em PIX, leads, configurações e métricas com exportação em CSV.</p></div>
+    <div class="card"><h3>⏱️ Execução com métricas</h3><p>Tela feita para usar na rua: Iniciar grava a hora real, Finalizar exige espera, km, estacionamento, pedágio e esforço de 1 a 5. Daí saem receita por hora efetiva, média de espera e custo extra médio.</p></div>
+    <div class="card"><h3>📋 Relatório copiável</h3><p>O texto do relatório vem pré-montado no modelo da marca a partir dos campos do atendimento. Um botão copia para o WhatsApp, outro marca como enviado — junto com os templates de confirmação, lembrete, saldo baixo e cobrança.</p></div>
+    <div class="card"><h3>🤖 Bot de Telegram</h3><p>No grupo privado da gestão: avisa novo lead, atendimento criado ou cancelado, “amanhã tem X às Y”, relatório pendente há mais de 2 horas e saldo baixo. Com comandos para fazer tudo do celular.</p></div>
+    <div class="card"><h3>⏰ Cron de lembretes</h3><p>Um job da Vercel Cron bate na rota protegida por <code>CRON_SECRET</code> e dispara os avisos internos do dia: lembrete véspera, lembrete de poucas horas antes e cobrança de relatório pendente.</p></div>
+  </div>
+</div></section>
+
+<section id="pre"><div class="wrap">
+  <span class="chip">Pré-requisitos</span>
+  <h2>O que precisa estar na mão antes de rodar</h2>
+  <p class="sub">Nada de infraestrutura própria: Node para o Next.js, a CLI do Supabase para o banco local, um bot de Telegram e (para publicar) uma conta na Vercel ligada ao GitHub.</p>
+  <div class="grid g3">
+    <div class="card"><h3>Node 20+ e npm</h3><p>O projeto é Next.js 15 com App Router, TypeScript e Tailwind 4.</p><pre><span class="c"># confira a versão</span>
+<span class="k">node -v</span>
+<span class="k">npm -v</span></pre></div>
+    <div class="card"><h3>Supabase local</h3><p>Postgres, Auth, Storage e RLS rodando em Docker pela CLI, sem precisar de projeto na nuvem para desenvolver.</p><pre><span class="c"># sobe o stack local</span>
+<span class="k">npx supabase start</span></pre></div>
+    <div class="card"><h3>Bot de Telegram</h3><p>Um bot só do Vou Contigo, criado no <span class="s">@BotFather</span>, e o id do grupo privado da gestão.</p><pre><span class="c"># no Telegram, fale com</span>
+<span class="s">@BotFather</span> <span class="c">→ /newbot</span></pre></div>
+  </div>
+</div></section>
+
+<section id="guia"><div class="wrap">
+  <span class="chip">Guia de uso · passo a passo</span>
+  <h2>Do clone à primeira família recebendo relatório</h2>
+  <p class="sub">Os passos 1 a 6 são a instalação, feita uma vez. O passo 7 é a rotina que se repete todo dia.</p>
+
+  <div class="step"><div class="b">1</div><div>
+    <h3>Clonar e instalar</h3>
+    <p>Baixe o repositório e instale as dependências.</p>
+<pre><span class="k">git clone</span> <span class="s">https://github.com/inematds/voucontigo.git</span>
+<span class="k">cd</span> voucontigo
+<span class="k">npm install</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">2</div><div>
+    <h3>Criar o arquivo de variáveis</h3>
+    <p>Copie o exemplo para <code>.env.local</code>. Ele já lista tudo que o projeto lê: Supabase, Telegram, cron e site.</p>
+<pre><span class="k">cp .env.example .env.local</span>
+
+<span class="c"># .env.local — o que preencher</span>
+NEXT_PUBLIC_SUPABASE_URL=       <span class="c"># Supabase &gt; Settings &gt; API</span>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=  <span class="c"># idem</span>
+SUPABASE_SERVICE_ROLE_KEY=      <span class="c"># idem (nunca no cliente)</span>
+TELEGRAM_BOT_TOKEN=             <span class="c"># @BotFather</span>
+TELEGRAM_WEBHOOK_SECRET=        <span class="c"># invente uma string longa</span>
+TELEGRAM_CHAT_GESTAO=           <span class="c"># id do grupo da gestão</span>
+CRON_SECRET=                    <span class="c"># segredo do Vercel Cron</span>
+NEXT_PUBLIC_SITE_URL=<span class="s">https://voucontigo.vercel.app</span>
+NEXT_PUBLIC_WHATSAPP_EMPRESA=<span class="s">5551999999999</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">3</div><div>
+    <h3>Subir o Supabase e aplicar o schema</h3>
+    <p><code>start</code> sobe o Postgres local e imprime as chaves; <code>db reset</code> recria o banco aplicando as migrações de <code>supabase/migrations</code>. Copie a URL e a anon key impressas para o <code>.env.local</code>.</p>
+<pre><span class="k">npx supabase start</span>
+<span class="k">npx supabase db reset</span>   <span class="c"># aplica migrações + seed</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">4</div><div>
+    <h3>Rodar e criar a usuária gestora</h3>
+    <p>Suba o servidor de desenvolvimento e abra o painel. A conta é criada no Supabase Auth (Studio local em <code>http://localhost:54323</code>, aba Authentication → Add user); um gatilho cria o perfil com o papel padrão <code>acompanhante</code>, então a primeira conta é promovida a <code>gestora</code> por SQL.</p>
+<pre><span class="k">npm run dev</span>   <span class="c"># http://localhost:3000  ·  painel em /painel</span>
+
+<span class="c"># promover a primeira conta a gestora (SQL Editor do Studio)</span>
+<span class="k">update</span> public.perfil <span class="k">set</span> papel = <span class="s">'gestora'</span>
+  <span class="k">where</span> id = (<span class="k">select</span> id <span class="k">from</span> auth.users <span class="k">where</span> email = <span class="s">'voce@exemplo.com'</span>);</pre>
+  </div></div>
+
+  <div class="step"><div class="b">5</div><div>
+    <h3>Criar o bot e registrar o webhook</h3>
+    <p>No Telegram, chame o <code>@BotFather</code>, mande <code>/newbot</code>, escolha nome e usuário e guarde o token em <code>TELEGRAM_BOT_TOKEN</code>. Adicione o bot ao grupo privado da gestão e coloque o id do grupo em <code>TELEGRAM_CHAT_GESTAO</code>. Depois aponte o webhook para a rota do projeto.</p>
+<pre><span class="c"># registra o webhook em NEXT_PUBLIC_SITE_URL/api/telegram</span>
+<span class="k">npx tsx scripts/telegram-set-webhook.ts</span></pre>
+    <p class="mut" style="font-size:.9rem">Em desenvolvimento o Telegram precisa de uma URL pública — use um túnel (ex.: <code>ngrok http 3000</code>) e rode o script com <code>NEXT_PUBLIC_SITE_URL</code> apontando para ele.</p>
+  </div></div>
+
+  <div class="step"><div class="b">6</div><div>
+    <h3>Publicar na Vercel</h3>
+    <p>Publicar é <code>git push</code>: o webhook git → Vercel faz o deploy. Antes, cadastre as mesmas variáveis do <code>.env.local</code> no projeto da Vercel (com as chaves do Supabase de produção) e rode o script do webhook de novo já com a URL final.</p>
+<pre><span class="k">git add -A</span>
+<span class="k">git commit -m</span> <span class="s">"feat: primeira versão do Vou Contigo"</span>
+<span class="k">git push</span>   <span class="c"># deploy automático · nada a fazer no dashboard</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">7</div><div>
+    <h3>A rotina do dia a dia</h3>
+    <p>O ciclo completo de um atendimento, do primeiro contato ao relatório na mão da família.</p>
+<pre><span class="c"># 1. chega o lead (formulário da landing ou WhatsApp)</span>
+<span class="c">#    → o bot avisa no grupo; a gestora responde pelo WhatsApp</span>
+<span class="k">/lead</span>                 <span class="c"># lista os leads novos</span>
+
+<span class="c"># 2. agendar</span>
+<span class="k">/agendar</span>              <span class="c"># assistente passo a passo (ou pelo painel)</span>
+
+<span class="c"># 3. no dia — a acompanhante, do celular</span>
+<span class="k">/hoje</span>                 <span class="c"># agenda do dia, com os ids</span>
+<span class="k">/iniciar 42</span>           <span class="c"># grava a hora real de início</span>
+
+<span class="c"># 4. ao terminar</span>
+<span class="k">/finalizar 42</span>         <span class="c"># pede espera, km, estacionamento, pedágio, esforço</span>
+
+<span class="c"># 5. relatório</span>
+<span class="k">/relatorio 42</span>         <span class="c"># texto pronto para copiar e colar no WhatsApp da família</span>
+
+<span class="c"># 6. saldo do pacote</span>
+<span class="k">/saldo Maria</span>          <span class="c"># horas usadas e restantes</span></pre>
+  </div></div>
+</div></section>
+
+<section id="telegram"><div class="wrap">
+  <span class="chip">Bot de gestão</span>
+  <h2>Comandos do Telegram</h2>
+  <p class="sub">Tudo que o bot faz, o painel também faz — o bot é o atalho no celular. Ele vive no grupo privado da gestora com a acompanhante.</p>
+  <div class="tablewrap">
+  <table class="cmd">
+    <thead><tr><th>Comando</th><th>O que faz</th></tr></thead>
+    <tbody>
+      <tr><td><code>/hoje</code></td><td>Agenda de hoje, com horário, acompanhado, tipo, destino e status.</td></tr>
+      <tr><td><code>/amanha</code></td><td>Agenda de amanhã — a base do lembrete da véspera.</td></tr>
+      <tr><td><code>/semana</code></td><td>Visão dos próximos sete dias, para enxergar ocupação e buracos.</td></tr>
+      <tr><td><code>/agendar</code></td><td>Assistente passo a passo: cliente, acompanhado, tipo, data e hora, saída e destino.</td></tr>
+      <tr><td><code>/cancelar &lt;id&gt;</code></td><td>Cancela o atendimento e registra o motivo, aplicando a política de cancelamento.</td></tr>
+      <tr><td><code>/iniciar &lt;id&gt;</code></td><td>Marca o início real — é o check-in da acompanhante.</td></tr>
+      <tr><td><code>/finalizar &lt;id&gt;</code></td><td>Marca o fim real e pede espera, km, estacionamento, pedágio e esforço de 1 a 5.</td></tr>
+      <tr><td><code>/relatorio &lt;id&gt;</code></td><td>Monta o relatório no modelo da marca para copiar e mandar à família.</td></tr>
+      <tr><td><code>/saldo &lt;cliente&gt;</code></td><td>Horas contratadas, usadas e restantes do pacote daquele cliente.</td></tr>
+      <tr><td><code>/lead</code></td><td>Lista os leads novos que chegaram pela landing, com o link do WhatsApp.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub" style="margin-top:22px">Além dos comandos, o bot avisa sozinho: novo lead, atendimento criado ou cancelado, lembrete de véspera, relatório pendente há mais de duas horas e saldo baixo de cliente.</p>
+</div></section>
+
+<section id="limites"><div class="wrap">
+  <span class="chip">Limites e responsabilidade</span>
+  <h2>O que o Vou Contigo não faz</h2>
+  <p class="sub">Isso não é letra miúda: é uma decisão de produto e de risco legal, e está gravada no próprio modelo de dados.</p>
+  <div class="grid g2">
+    <div class="card"><h3>🚫 Sem cuidados médicos</h3><p>Não há aplicação de medicação, enfermagem, procedimentos nem cuidado clínico. O sistema <strong>não tem campos de medicação nem prontuário</strong> — só um campo de “restrições declaradas” em texto livre, com o mínimo necessário. A landing traz a seção “o que não fazemos” de propósito.</p></div>
+    <div class="card"><h3>🔒 LGPD desde o schema</h3><p>Dados de pessoas idosas, endereço e mobilidade são sensíveis. Coleta mínima, consentimento registrado no cadastro, fotos só com autorização explícita, exclusão a pedido, acesso ao painel apenas com login e isolamento por RLS no Supabase.</p></div>
+  </div>
+</div></section>
+
+<section id="roadmap"><div class="wrap">
+  <span class="chip">Roadmap</span>
+  <h2>Três versões, uma por vez</h2>
+  <p class="sub">O MVP existe para operar uma acompanhante com organização e juntar os números que validam o preço. Só depois disso entra automação, e só depois dela entra rede.</p>
+  <div class="phase"><div class="tag">v1.0.0</div><div class="d"><strong>Caderno digital · 3–4 semanas</strong><span>Landing que converte para o WhatsApp, painel com agenda e cadastros, execução do atendimento com métricas de preço, relatório copiável, pacotes e saldo, financeiro em PIX manual, bot de Telegram da gestão e cron de lembretes internos. WhatsApp ainda manual.</span></div></div>
+  <div class="phase"><div class="tag">v2.0.0</div><div class="d"><strong>Automação · +6–8 semanas</strong><span>WhatsApp Cloud API oficial para agendar, cancelar e receber lembretes sem depender de alguém responder; relatório enviado sozinho ao finalizar; cobrança PIX pelo Asaas com webhook de conciliação; portal do familiar com histórico, saldo e próximas visitas; aprovação por botões no Telegram.</span></div></div>
+  <div class="phase"><div class="tag">v3.0.0</div><div class="d"><strong>Rede · +8–12 semanas</strong><span>Várias acompanhantes com disponibilidade e repasse, matching por região e histórico, app PWA da acompanhante com check-in, avaliação da família, IA assistiva para escrever relatório e resumir o histórico antes da visita, financeiro completo e programa de indicação.</span></div></div>
+</div></section>
+
+<footer>
+  <div class="wrap">
+    <div class="pill">Next.js 15</div><div class="pill">TypeScript</div><div class="pill">Tailwind 4</div><div class="pill">Supabase</div><div class="pill">grammY</div><div class="pill">Vercel</div>
+    <p style="margin-top:18px">Vou Contigo · plano completo em
+      <a href="https://github.com/inematds/voucontigo/blob/main/PLANO.md">PLANO.md</a> ·
+      <a href="https://github.com/inematds/voucontigo">github.com/inematds/voucontigo</a> ·
+      <a href="https://inema.club">INEMA.CLUB</a></p>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var KEY='voucontigo-theme';
+    var b=document.body, t=document.getElementById('themeToggle');
+    if(localStorage.getItem(KEY)==='light'){ b.classList.add('light'); t.textContent='☀️'; }
+    t.addEventListener('click',function(){
+      var light=b.classList.toggle('light');
+      t.textContent=light?'☀️':'🌙';
+      localStorage.setItem(KEY, light?'light':'dark');
+    });
+  })();
+</script>
+</body>
+</html>

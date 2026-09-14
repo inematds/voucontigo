@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+supabase/.temp
+guia
+docs
+assets
+*.md
+.env*
+!.env.example
