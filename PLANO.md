@@ -1,6 +1,6 @@
 # Vou Contigo — Plano de implementação da plataforma
 
-**Versão do documento:** 1.0.0 · **Data:** 2026-09-14
+**Versão do documento:** 2.0.0 · **Data:** 2026-09-14 (v1 e v2 construídas)
 **Fontes:** `docs/conversa-original.md` (conceito, planos, preços, próximos passos) e `assets/logo.jpg` (identidade visual).
 
 ---
@@ -140,9 +140,9 @@ Escolhida para bater com o ecossistema já usado nos projetos INEMA (Next.js na 
 |---|---|---|
 | Web (landing, painel, portal) | **Next.js 15 (App Router) + TypeScript + Tailwind** | Mesmo padrão do portal inema.club; deploy automático por git → Vercel |
 | Banco, auth, storage | **Supabase** (Postgres + RLS + Auth + Storage) | Já usado nas áreas logadas inema.pro; RLS resolve multi-papel; Storage para fotos consentidas |
-| Jobs agendados (lembretes) | **Vercel Cron** (v1) → **Supabase Edge Functions + pg_cron** (v2) | Sem infra própria |
+| Jobs agendados (lembretes, renovações) | **Vercel Cron** (`vercel.json`) ou **cron do sistema na VPS** (`deploy/vps-cron.example`) chamando as rotas `/api/cron/*` | Sem infra própria; na VPS o cron horário não depende de plano pago |
 | Bot Telegram (gestão) | **grammY** rodando em rota Next.js (webhook) | Grátis, simples, ótimo para notificar e comandar |
-| WhatsApp | v1: **WhatsApp Business app** (manual, com templates copiáveis) · v2: **Meta WhatsApp Cloud API** (ver decisão §7.1) | Meta oficial evita ban; começar manual não trava o lançamento |
+| WhatsApp | v1: **WhatsApp Business app** (manual, com templates copiáveis) · v2: **Evolution API** self-hosted (ver decisão §7.1; Meta Cloud API mantida como alternativa por env) | Número comum via QR, sem templates aprovados, custo zero por mensagem |
 | Cobrança | v1: PIX manual (chave + comprovante) · v2: **Asaas** (PIX + boleto + cartão, webhook) | Asaas é o mais simples para MEI/pequeno no Brasil |
 | Hospedagem | **Vercel** (deploy via `git push`, regra da casa) | — |
 | Repositório | `inematds/voucontigo` (nome = pasta local) | Regra da casa |
@@ -252,20 +252,29 @@ Escolhida para bater com o ecossistema já usado nos projetos INEMA (Next.js na 
 ### 7.1b Horários livres por WhatsApp ou e-mail (requisito adicionado em 2026-09-14)
 O familiar pode receber a lista de horários livres pelo canal que preferir: opção 3 do menu do WhatsApp, botões "Receber por e-mail / por WhatsApp" no portal do familiar, e envio semanal opcional pelo cron (config `enviar_horarios_semanal`). E-mail transacional via Resend (REST), com Fake quando não configurado.
 
-### 7.2 Entregas
-- **Bot WhatsApp conversacional** (menu numérico simples, sem exigir "entender" texto livre):
-  - `1` Agendar → tipo → data/horário (oferece slots livres da agenda) → destino → resumo → confirmar (fica `solicitado` até a gestora aprovar, ou `agendado` direto se dentro do raio e com saldo).
-  - `2` Cancelar/remarcar → lista próximos atendimentos → aplica política de cancelamento e informa.
-  - `3` Meu saldo / minha próxima visita.
-  - `4` Falar com uma pessoa → notifica Telegram.
-  - Texto livre fora do menu → encaminha para humano (Telegram) com contexto.
-- **Lembretes automáticos** via template Meta: D-1, 2h antes, "estamos a caminho" (disparado pelo check-in), pós-relatório "quer avaliar?".
-- **Relatório automático**: ao finalizar no painel/Telegram, o sistema monta o relatório e envia pelo WhatsApp; a acompanhante só revisa o texto antes.
-- **Cobrança Asaas**: pacote gera cobrança PIX com QR; webhook marca pago; lembrete de vencimento; renovação mensal do plano Frequente com aviso 3 dias antes.
-- **Portal do familiar** (`/minha-conta`, login por link mágico no WhatsApp/e-mail): histórico de relatórios, saldo, próximas visitas, pagamentos, dados do acompanhado, exportar PDF de relatórios do mês.
-- **Regras aplicadas automaticamente**: raio (geocodificação do destino), taxa de cancelamento, espera contando como hora após a tolerância.
-- **Telegram** ganha: aprovação de solicitação com botões inline (✅ aprovar / ✏️ ajustar / ❌ recusar), resumo diário 7h, resumo financeiro semanal.
-- **Painel** ganha: caixa de entrada unificada (WhatsApp + leads), timeline por cliente (Evento), calendário compartilhável (.ics).
+### 7.2 Entregas — situação em 2026-09-14
+
+Legenda: **✅ feito** · **⚠️ parcial** (entregue com desvio em relação ao que este plano previa).
+
+- ✅ **Bot WhatsApp conversacional** (`lib/whatsapp/fluxo.ts` + `textos.ts`), menu numérico — a ordem final ficou diferente da rascunhada aqui:
+  - `1` **Agendar** → tipo → data/horário (oferece slots livres calculados da agenda) → destino → resumo → confirmar. Grava via RPC `solicitar_atendimento`; nasce `solicitado` para a gestora aprovar.
+  - `2` **Cancelar ou remarcar** → lista os atendimentos abertos → RPC `cancelar_atendimento_familiar`, que aplica a política de cancelamento e informa a taxa.
+  - `3` **Ver horários livres** (opção adicionada — ver §7.1b).
+  - `4` **Meu saldo e próxima visita**.
+  - `5` **Falar com uma pessoa** → põe a conversa no estado `humano` e notifica o Telegram.
+  - ✅ **Texto livre no menu** vai para o humano, como previsto. Entram em `humano` três situações: a opção `5`, texto livre no menu e **número sem cadastro** (que também vira lead). Dentro dos passos de um fluxo (escolher tipo, data, horário) a resposta inválida não escala: pede o número de novo. Uma vez em `humano`, **o bot fica totalmente em silêncio** — nem "menu" reativa — até `/liberar` no Telegram.
+- ⚠️ **Lembretes automáticos** (`lib/automacao/lembretes.ts`): **D-1** e **2h antes** enviados direto ao cliente (WhatsApp + e-mail quando houver) e **confirmação ao aprovar** a solicitação. Não foram feitos o "estamos a caminho" disparado pelo check-in nem o pós-relatório "quer avaliar?". E não são *templates Meta*: o provedor é Evolution API, texto livre (§7.1).
+- ✅ **Relatório automático** (`lib/automacao/relatorio.ts`): ao finalizar no painel ou no Telegram, o sistema monta e envia o relatório ao cliente.
+- ✅ **Cobrança Asaas** (`lib/asaas/**`, `app/api/asaas/webhook`, `app/api/cron/renovacoes`): cobrança PIX com QR/copia-e-cola, webhook autenticado por header `asaas-access-token` marcando pago/estornado, aviso de vencimento e renovação mensal com `renovacao_aviso_dias` (padrão 3). O pacote novo só nasce quando o webhook confirma o pagamento.
+- ⚠️ **Portal do familiar** (`app/(portal)/**`): `/entrar` por link mágico, `/minha-conta` com saldo, próximas visitas, histórico e dados do acompanhado; `/minha-conta/horarios` com solicitação e botões "receber por e-mail / por WhatsApp"; cancelamento pelo portal. Desvios:
+  - ⚠️ o link mágico é **só por e-mail**; **OTP por WhatsApp está marcado "em breve"** na própria tela.
+  - ⚠️ **PDF do mês** é, na prática, `/minha-conta/relatorios/[mes]` — uma **página imprimível** (botão Imprimir → "Salvar como PDF"), não um PDF gerado no servidor.
+  - ⚠️ o vínculo familiar↔cliente depende de `vincular_familiar` casando **e-mail (ou WhatsApp) já cadastrado no painel**; sem isso o login cai em `/entrar/sem-cadastro`.
+- ⚠️ **Regras aplicadas automaticamente**: taxa de cancelamento e espera após tolerância são calculadas e aplicadas ✅. O **raio** (`lib/automacao/raio.ts`, geocoder Nominatim) é **informativo**: sem `lat_base`/`lng_base` ou sem geocoder o resultado é "raio não verificado" e **nada é bloqueado** — a frase vai para a gestora decidir.
+- ⚠️ **Telegram** (`lib/telegram/comandos-v2.ts` + `bot.ts`): botões inline ✅ aprovar / ✏️ ajustar / ❌ recusar ✅, novos comandos `/solicitacoes`, `/conversas`, `/responder`, `/liberar`, `/resumo`, `/financeiro` ✅. O **resumo diário sai junto do cron das 7h** (não é um job separado) e o **resumo financeiro semanal sai nesse mesmo cron às segundas** — ambos funcionam, mas dependem do cron de sistema na VPS (na Vercel Hobby o cron é diário).
+- ⚠️ **Painel**: caixa de entrada unificada `/painel/inbox` ✅, `/painel/solicitacoes` ✅, timeline por cliente (tabela `evento`) ✅, **calendário `.ics`** em `/minha-conta/calendario.ics` ⚠️ — é **download autenticado pela sessão do portal**, não uma URL pública de assinatura que o Google Agenda consiga sincronizar sozinho.
+- ✅ **E-mail transacional** (`lib/email/cliente.ts`): Resend via REST, sem SDK; sem `RESEND_API_KEY` o cliente vira Fake (só registra).
+- ✅ **Banco**: migrações `0004_v2_schema.sql` (conversa/mensagem de WhatsApp, `webhook_processado`) e `0005_v2_rls_funcoes.sql` (papel familiar por `auth_user_id`, RPCs `solicitar_atendimento`, `cancelar_atendimento_familiar`, `vincular_familiar`, `horarios_ocupados`).
 
 ### 7.3 Critérios de aceite
 - 80% dos agendamentos entram sem intervenção humana no horário comercial.
@@ -302,7 +311,7 @@ O familiar pode receber a lista de horários livres pelo canal que preferir: op�
 
 | Risco / decisão | Impacto | Mitigação |
 |---|---|---|
-| Verificação Meta Business demorar | Atrasa v2 | Começar o processo na semana 1 do MVP; plano B Z-API |
+| Número comum do WhatsApp (Evolution) ser bloqueado pela Meta | Perde o canal principal | Só mensagens de compromissos reais e respostas a quem escreveu; nada de disparo em massa; plano B: `WHATSAPP_PROVIDER=meta` (Cloud API oficial, já no código) |
 | Raio, espera e cancelamento ainda não definidos | Bloqueiam templates e cálculo | Definir antes da semana 2; o sistema aceita mudar depois |
 | Preço errado nos primeiros clientes | Margem | Métricas de validação no MVP; revisar após 10–20 atendimentos |
 | LGPD com dados de idosos | Legal/reputação | Mínimo necessário, consentimento, RLS, sem prontuário, política de privacidade na landing |
@@ -312,13 +321,41 @@ O familiar pode receber a lista de horários livres pelo canal que preferir: op�
 
 ---
 
-## 10. Próximos passos concretos
+## 10. Próximos passos concretos (atualizado em 2026-09-14, com v1 e v2 já construídas)
 
-1. Fundadora define: cidade e raio, tolerância de espera, política de cancelamento, chave PIX, número do WhatsApp Business.
-2. Criar repo `inematds/voucontigo` e projeto Supabase; iniciar verificação Meta Business em paralelo.
-3. Semana 1 do cronograma (§6.5): landing publicada com formulário → Telegram.
-4. Fotos reais da acompanhante e 3 depoimentos (mesmo que de conhecidos) para a landing.
-5. Após 10 atendimentos reais: reunião de revisão de preço com os dados do painel.
+O código das duas versões está pronto. O que falta é **ligar as contas externas e decidir as regras de negócio** — tudo isso é trabalho da fundadora, não do código.
+
+**A. Contas e infraestrutura**
+
+1. **Supabase Cloud** — criar o projeto, aplicar `supabase/migrations` (0001→0005), copiar URL + anon key + service role para as variáveis. Em **Authentication → URL Configuration → Redirect URLs**, adicionar **os dois** callbacks, senão o login quebra:
+   - `${NEXT_PUBLIC_SITE_URL}/entrar/callback` (portal do familiar)
+   - `${NEXT_PUBLIC_SITE_URL}/login/callback` (painel da equipe)
+   Depois criar a conta da gestora e promovê-la (`update public.perfil set papel = 'gestora' ...`).
+2. **Bot de Telegram** — `@BotFather` → token; criar o grupo privado da gestão, pegar o `chat_id`, rodar `npx tsx scripts/telegram-set-webhook.ts`.
+3. **Evolution API na VPS** — subir `docker-compose.evolution.yml`, abrir `https://evolution.inema.club/manager`, criar a instância `voucontigo`, **ler o QR com o celular do número do Vou Contigo** e cadastrar o webhook `https://voucontigo.inema.club/api/whatsapp?token=<WHATSAPP_WEBHOOK_TOKEN>` com `MESSAGES_UPSERT` + `MESSAGES_UPDATE`, `webhook_by_events=false`, `webhook_base64=false`.
+4. **Asaas** — começar em **sandbox** (`ASAAS_BASE_URL=https://sandbox.asaas.com/api/v3`), testar uma cobrança PIX de ponta a ponta com o webhook (header `asaas-access-token`), e **só então** trocar `ASAAS_API_KEY` e `ASAAS_BASE_URL` para produção (a config `asaas_ambiente` existe no catálogo e serve como registro do ambiente em uso).
+5. **Resend** (opcional, mas recomendado) — verificar o domínio do `EMAIL_FROM`; sem `RESEND_API_KEY` o e-mail simplesmente não sai (modo Fake) e tudo vai só por WhatsApp.
+6. **DNS** — apontar `voucontigo.inema.club` (app) e `evolution.inema.club` (Evolution) para a VPS e acrescentar o trecho de `deploy/Caddyfile.snippet`. Instalar `deploy/vps-cron.example` em `/etc/cron.d/` (na VPS o cron é do sistema; na Vercel o cron horário exigiria plano Pro).
+
+**B. Regras de negócio que só a fundadora decide** (painel → Configurações; defaults em `supabase/seed.sql`)
+
+| Config | Default de partida | Precisa decidir |
+|---|---|---|
+| `cidade_base`, `endereco_base`, `lat_base`, `lng_base` | Porto Alegre, coordenadas **vazias** | **Sem lat/lng o raio nunca é verificado.** Preencher. |
+| `raio_km` | 20 | Raio real de atendimento |
+| `tolerancia_espera_min` | 15 | Quanto de espera não conta como hora |
+| `cancelamento_gratis_horas` / `cancelamento_taxa_percentual` | 24 h / 50% | Política de cancelamento (o bot já aplica sozinho) |
+| `valor_hora_centavos`, `minimo_horas_avulso` | R$ 75/h, 2 h | Preço até a revisão dos 10–20 atendimentos |
+| `chave_pix`, `whatsapp_empresa` | vazios | Preencher antes do primeiro cliente |
+| `horario_inicio`/`horario_fim`/`dias_semana`/`slot_min` | 07:00–19:00, seg–sáb, 30 min | Define quais horários o bot oferece |
+| `enviar_horarios_semanal` | ausente (desligado) | `1` liga o envio de horários livres às segundas |
+
+**C. Operação e depois**
+
+7. Fotos reais da acompanhante e 3 depoimentos para a landing.
+8. Rodar 10–20 atendimentos reais e fazer a **reunião de revisão de preço** com as métricas do painel.
+9. Fechar as lacunas ⚠️ da §7.2 conforme a operação pedir: OTP por WhatsApp no portal, `.ics` por URL assinada, "estamos a caminho" no check-in, PDF do relatório gerado no servidor.
+10. Só então abrir a **v3.0.0 — Rede** (§8): múltiplas acompanhantes, app PWA com check-in, avaliações e IA assistiva.
 
 ---
 
