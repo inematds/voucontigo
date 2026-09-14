@@ -268,3 +268,83 @@ export const MOBILIDADE_LABEL: Record<Mobilidade, string> = {
   cadeira_rodas: "Cadeira de rodas",
   precisa_apoio: "Precisa de apoio para andar",
 };
+
+// ===========================================================================
+// v2.0.0 — WhatsApp API, cobrança Asaas, portal do familiar
+// ===========================================================================
+
+/** Estados da conversa do bot de WhatsApp (menu numérico). */
+export type EstadoConversa =
+  | "menu"
+  | "agendar_acompanhado"
+  | "agendar_tipo"
+  | "agendar_data"
+  | "agendar_hora"
+  | "agendar_destino"
+  | "agendar_confirmar"
+  | "cancelar_escolher"
+  | "cancelar_confirmar"
+  | "humano"
+  | "encerrada";
+
+export interface ConversaWhatsApp {
+  id: UUID;
+  whatsapp: string; // E.164 sem '+'
+  cliente_id: UUID | null;
+  estado: EstadoConversa;
+  dados: Record<string, unknown>; // rascunho do agendamento em curso etc.
+  ultima_mensagem_em: ISODateTime | null;
+  criado_em: ISODateTime;
+  atualizado_em: ISODateTime;
+}
+
+export type DirecaoMensagem = "entrada" | "saida";
+export type StatusMensagem = "recebida" | "enviada" | "entregue" | "lida" | "falhou";
+
+export interface MensagemWhatsApp {
+  id: UUID;
+  conversa_id: UUID;
+  direcao: DirecaoMensagem;
+  wa_message_id: string | null; // id da Meta — chave de idempotência
+  corpo: string;
+  template: string | null; // nome do template Meta quando for mensagem iniciada pela empresa
+  status: StatusMensagem;
+  criado_em: ISODateTime;
+}
+
+/** Campos novos em `pagamento` (v2). */
+export interface PagamentoAsaas {
+  asaas_id: string | null;
+  pix_qrcode_base64: string | null;
+  pix_copia_cola: string | null;
+  link_pagamento: string | null;
+}
+
+/** Campo novo em `cliente` (v2): vínculo com auth.users para o portal do familiar. */
+export interface ClientePortal {
+  auth_user_id: UUID | null;
+}
+
+/** Chaves de configuração acrescentadas na v2. */
+export type ChaveConfiguracaoV2 =
+  | "horario_inicio" // 'HH:MM' ex.: "07:00"
+  | "horario_fim" // 'HH:MM' ex.: "19:00"
+  | "dias_semana" // ex.: "1,2,3,4,5,6" (0 = domingo)
+  | "intervalo_entre_atendimentos_min" // ex.: "60"
+  | "slot_min" // granularidade dos horários ofertados, ex.: "30"
+  | "endereco_base" // endereço usado como centro do raio
+  | "lat_base"
+  | "lng_base"
+  | "whatsapp_template_confirmacao" // nomes aprovados na Meta
+  | "whatsapp_template_lembrete_d1"
+  | "whatsapp_template_lembrete_2h"
+  | "whatsapp_template_relatorio"
+  | "whatsapp_template_cobranca"
+  | "whatsapp_template_saldo_baixo"
+  | "asaas_ambiente" // 'sandbox' | 'producao'
+  | "renovacao_aviso_dias"; // ex.: "3"
+
+export interface SlotDisponivel {
+  data: ISODate;
+  hora: string; // 'HH:MM'
+}
