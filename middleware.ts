@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Padrão oficial @supabase/ssr: renova a sessão e copia os cookies para a
- * resposta. Protege /painel e manda quem já está logado de /login para /painel.
+ * resposta.
+ * Painel da equipe: protege /painel e manda quem já está logado de /login para /painel.
+ * Portal do familiar: protege /minha-conta e manda quem já está logado de /entrar
+ * para /minha-conta. Atenção: o matcher usa "/entrar" EXATO — /entrar/callback e
+ * /entrar/sem-cadastro precisam ficar acessíveis com sessão ativa.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -43,6 +47,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (!user && pathname.startsWith("/minha-conta")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/entrar";
+    url.search = "";
+    url.searchParams.set("proximo", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (user && pathname === "/entrar") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/minha-conta";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/painel";
@@ -58,5 +77,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/painel/:path*", "/login"],
+  matcher: ["/painel/:path*", "/login", "/minha-conta/:path*", "/entrar"],
 };

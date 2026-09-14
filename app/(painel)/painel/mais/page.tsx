@@ -11,6 +11,8 @@ export default async function MaisPage() {
 
   const itens = [
     { href: "/painel/leads", rotulo: "Leads", icone: "📥" },
+    { href: "/painel/inbox", rotulo: "Inbox WhatsApp", icone: "💬" },
+    { href: "/painel/solicitacoes", rotulo: "Solicitações", icone: "🙋" },
     ...(ehGestora
       ? [
           { href: "/painel/metricas", rotulo: "Métricas de validação", icone: "📊" },

@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { contarPendencias } from "@/app/(painel)/_lib/acoes-inbox";
 import { cn } from "./ui";
 
 export type ItemNav = { href: string; rotulo: string; icone: string };
@@ -15,8 +17,52 @@ export const ITENS_PRINCIPAIS: ItemNav[] = [
 ];
 
 export const ITENS_EXTRAS: ItemNav[] = [
+  { href: "/painel/inbox", rotulo: "Inbox", icone: "💬" },
+  { href: "/painel/solicitacoes", rotulo: "Solicitações", icone: "🙋" },
   { href: "/painel/leads", rotulo: "Leads", icone: "📥" },
 ];
+
+/**
+ * Contadores de pendência (conversas aguardando humano e solicitações).
+ * O layout é Server Component e não repassa props para cá, então buscamos
+ * via Server Action, refazendo a cada navegação.
+ */
+function usePendencias(pathname: string) {
+  const [pendencias, setPendencias] = useState({ inbox: 0, solicitacoes: 0 });
+  useEffect(() => {
+    let vivo = true;
+    contarPendencias()
+      .then((p) => {
+        if (vivo) setPendencias(p);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [pathname]);
+  return pendencias;
+}
+
+function contagemDe(
+  href: string,
+  p: { inbox: number; solicitacoes: number },
+): number {
+  if (href === "/painel/inbox") return p.inbox;
+  if (href === "/painel/solicitacoes") return p.solicitacoes;
+  return 0;
+}
+
+function Contador({ valor }: { valor: number }) {
+  if (valor <= 0) return null;
+  return (
+    <span
+      aria-label={`${valor} pendente${valor === 1 ? "" : "s"}`}
+      className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-vc-marrom px-1.5 text-[11px] font-bold text-vc-creme"
+    >
+      {valor > 99 ? "99+" : valor}
+    </span>
+  );
+}
 
 export const ITENS_GESTORA: ItemNav[] = [
   { href: "/painel/metricas", rotulo: "Métricas", icone: "📊" },
@@ -30,6 +76,8 @@ function ativo(pathname: string, href: string) {
 
 export function BarraInferior({ ehGestora }: { ehGestora: boolean }) {
   const pathname = usePathname();
+  const pendencias = usePendencias(pathname);
+  const totalExtras = pendencias.inbox + pendencias.solicitacoes;
   const maisAtivo =
     [...ITENS_EXTRAS, ...(ehGestora ? ITENS_GESTORA : [])].some((i) =>
       ativo(pathname, i.href),
@@ -72,8 +120,13 @@ export function BarraInferior({ ehGestora }: { ehGestora: boolean }) {
               maisAtivo ? "text-vc-verde" : "text-vc-texto/60",
             )}
           >
-            <span aria-hidden className="text-lg leading-none">
+            <span aria-hidden className="relative text-lg leading-none">
               ☰
+              {totalExtras > 0 ? (
+                <span className="absolute -top-1 -right-2 inline-flex min-w-4 items-center justify-center rounded-full bg-vc-marrom px-1 text-[10px] font-bold text-vc-creme">
+                  {totalExtras > 99 ? "99+" : totalExtras}
+                </span>
+              ) : null}
             </span>
             Mais
           </Link>
@@ -93,6 +146,7 @@ export function Sidebar({
   children?: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const pendencias = usePendencias(pathname);
   const itens = [
     ...ITENS_PRINCIPAIS,
     ...ITENS_EXTRAS,
@@ -127,6 +181,7 @@ export function Sidebar({
                 >
                   <span aria-hidden>{item.icone}</span>
                   {item.rotulo}
+                  <Contador valor={contagemDe(item.href, pendencias)} />
                 </Link>
               </li>
             );

@@ -3,3 +3,8 @@ voucontigo.inema.club {
 	reverse_proxy voucontigo-app-1:3000
 	encode gzip
 }
+
+# Evolution API (manager + webhook de saída). Proteja o /manager com a API key.
+evolution.inema.club {
+	reverse_proxy voucontigo-evolution-1:8080
+}

@@ -20,8 +20,8 @@ Entregas em três versões:
 
 | Versão | Nome | Objetivo | Prazo estimado |
 |---|---|---|---|
-| **v1.0.0 — MVP** | "Caderno digital" | Operar 1 acompanhante com organização, relatório e métricas de preço. Landing + painel + bot Telegram da gestão. WhatsApp manual. | 3–4 semanas |
-| **v2.0.0** | "Automação" | WhatsApp API (agendar, cancelar, lembretes, relatório automático), cobrança PIX, portal do familiar. | +6–8 semanas |
+| **v1.0.0 — MVP** | "Caderno digital" | Operar 1 acompanhante com organização, relatório e métricas de preço. Landing + painel + bot Telegram da gestão. WhatsApp manual. **Construída em 2026-09-14.** | 3–4 semanas (feito em 1 dia com agentes) |
+| **v2.0.0** | "Automação" | WhatsApp via Evolution API (agendar, cancelar, horários livres, lembretes, relatório automático), cobrança PIX Asaas, portal do familiar, e-mail. **Construída em 2026-09-14.** | +6–8 semanas (feito em 1 dia com agentes) |
 | **v3.0.0** | "Rede" | Múltiplas acompanhantes, app da acompanhante com check-in, avaliações, IA para agenda e relatório. | +8–12 semanas |
 
 Segue o semver da casa (`vX.XX.YY`): dentro de cada major, minor/patch vão sendo somados sem zerar.
@@ -245,9 +245,12 @@ Escolhida para bater com o ecossistema já usado nos projetos INEMA (Next.js na 
 
 **Meta:** o familiar **agenda, cancela e recebe lembretes pelo WhatsApp** sem depender de alguém responder na hora; cobrança vira PIX automático; o relatório sai sozinho quando a acompanhante finaliza.
 
-### 7.1 Decisão: qual WhatsApp API
-- **Meta WhatsApp Cloud API (oficial)** — recomendada. Sem risco de banimento, templates aprovados para lembretes (mensagens iniciadas pela empresa exigem template aprovado), custo por conversa baixo no volume deste negócio. Exige Meta Business verificado e número dedicado.
-- Z-API / Evolution API (não oficiais) — mais rápido de ligar, mas risco de bloqueio do número. Só como plano B se a verificação Meta travar.
+### 7.1 Decisão: qual WhatsApp API — **Evolution API (decidido em 2026-09-14)**
+- **Evolution API (self-hosted, número comum via QR)** — escolhida pela fundadora. Sem verificação Meta, sem templates aprovados, texto livre a qualquer hora, roda na própria VPS (`docker-compose.evolution.yml`). Custo zero por mensagem. Risco: número comum pode ser bloqueado pela Meta se houver spam ou volume anormal; mitigação: só conversas iniciadas pelo cliente ou lembretes de compromissos reais, sem disparos em massa.
+- **Meta WhatsApp Cloud API (oficial)** — mantida como alternativa no código (`WHATSAPP_PROVIDER=meta`): sem risco de banimento, mas exige Meta Business verificado, número dedicado e templates aprovados para mensagens fora da janela de 24h.
+
+### 7.1b Horários livres por WhatsApp ou e-mail (requisito adicionado em 2026-09-14)
+O familiar pode receber a lista de horários livres pelo canal que preferir: opção 3 do menu do WhatsApp, botões "Receber por e-mail / por WhatsApp" no portal do familiar, e envio semanal opcional pelo cron (config `enviar_horarios_semanal`). E-mail transacional via Resend (REST), com Fake quando não configurado.
 
 ### 7.2 Entregas
 - **Bot WhatsApp conversacional** (menu numérico simples, sem exigir "entender" texto livre):

@@ -1,0 +1,63 @@
+# Evolution API (WhatsApp por número comum, via QR) — roda na mesma VPS do app.
+# Uso: docker compose -f docker-compose.evolution.yml --env-file .env.evolution up -d
+# Depois: abrir https://evolution.<dominio>/manager, criar a instância "voucontigo", ler o QR com o
+# celular do número do Vou Contigo e configurar o webhook:
+#   URL: https://voucontigo.inema.club/api/whatsapp?token=<WHATSAPP_WEBHOOK_TOKEN>
+#   Eventos: MESSAGES_UPSERT, MESSAGES_UPDATE  (webhook_by_events = false, webhook_base64 = false)
+# Memória: ~350 MB (evolution) + ~60 MB (postgres). Cabe na VPS Tiza ao lado do app.
+services:
+  evolution:
+    image: atendai/evolution-api:v2.2.3
+    restart: unless-stopped
+    environment:
+      SERVER_URL: ${EVOLUTION_SERVER_URL:-https://evolution.inema.club}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_DB_PASSWORD:-evolution}@evolution-db:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: evolution
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      CONFIG_SESSION_PHONE_CLIENT: "Vou Contigo"
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      LANGUAGE: pt-BR
+      LOG_LEVEL: ERROR,WARN
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - evolution-db
+    networks: [web]
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  evolution-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD:-evolution}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+    networks: [web]
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+volumes:
+  evolution_instances:
+  evolution_pg:
+
+networks:
+  web:
+    external: true
+    name: inemadlp_default

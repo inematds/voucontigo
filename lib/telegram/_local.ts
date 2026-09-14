@@ -14,7 +14,11 @@
  */
 
 import { calcularHorasAtendimento } from "@/lib/domain/horas";
-import { renderTemplate as renderTemplateDominio } from "@/lib/domain/templates";
+import {
+  montarRelatorio as montarRelatorioDominio,
+  renderTemplate as renderTemplateDominio,
+  TEMPLATE_RELATORIO_PADRAO,
+} from "@/lib/domain/templates";
 
 export const TZ = "America/Sao_Paulo";
 export const OFFSET_BR = "-03:00";
@@ -177,22 +181,39 @@ export interface DadosRelatorio {
   horas_restantes: number | null;
 }
 
-/** Relatório pós-atendimento conforme §6.2 do PLANO (texto para WhatsApp). */
-export function montarRelatorio(d: DadosRelatorio): string {
-  const linhas = [
-    `*Relatório — ${d.acompanhado} · ${ddmm(d.data)}*`,
-    `✅ ${d.tipo} em ${d.destino}`,
-    `⏰ Saímos ${d.inicio_real ? horaSP(d.inicio_real) : "--:--"} e voltamos ${
-      d.fim_real ? horaSP(d.fim_real) : "--:--"
-    }`,
-    `🗒️ ${d.texto?.trim() || "Tudo tranquilo, sem intercorrências."}`,
-    `💰 Extras: ${d.extras_centavos > 0 ? reais(d.extras_centavos) : "nenhum"}`,
-  ];
-  if (d.horas_restantes !== null) {
-    linhas.push(`⏳ Saldo do pacote: ${d.horas_restantes}h`);
-  }
-  linhas.push("Qualquer dúvida, estou por aqui. 💚");
-  return linhas.join("\n");
+/**
+ * Relatório pós-atendimento (§6.2 do PLANO). ADAPTADOR: a montagem real vive
+ * em `lib/domain/templates.montarRelatorio`, para que o relatório do Telegram
+ * e o do painel sejam idênticos. `template` é o valor de
+ * `configuracao.template_relatorio`; omitido, usa o modelo padrão do domínio.
+ */
+export function montarRelatorio(d: DadosRelatorio, template?: string): string {
+  const atendimento = {
+    tipo: d.tipo,
+    endereco_destino: d.destino,
+    endereco_saida: "",
+    data: d.data,
+    hora_prevista_inicio: "",
+    inicio_real: d.inicio_real ? d.inicio_real.toISOString() : null,
+    fim_real: d.fim_real ? d.fim_real.toISOString() : null,
+    relatorio_texto: d.texto?.trim() || "Tudo tranquilo, sem intercorrências.",
+    custo_estacionamento_centavos: null,
+    custo_pedagio_centavos: null,
+    custo_outros_centavos: d.extras_centavos > 0 ? d.extras_centavos : null,
+    km_rodados: null,
+    minutos_espera: null,
+    horas_debitadas: null,
+  } as unknown as Parameters<typeof montarRelatorioDominio>[0];
+
+  return montarRelatorioDominio(
+    atendimento,
+    { nome: d.acompanhado, apelido: null },
+    { nome: "" },
+    d.horas_restantes === null
+      ? null
+      : { horas_contratadas: d.horas_restantes, horas_usadas: 0 },
+    template && template.trim() !== "" ? template : TEMPLATE_RELATORIO_PADRAO,
+  );
 }
 
 // ---------------------------------------------------------------------------

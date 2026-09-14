@@ -40,21 +40,29 @@ function paraDate(v: ISODateTime | Date | null | undefined): Date | null {
 }
 
 /** "quinta-feira, 18 de setembro" */
+const TZ_BR = "America/Sao_Paulo";
+function fmtBR(d: Date, opts: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: TZ_BR, ...opts }).format(d);
+}
+
+/** Sempre em America/Sao_Paulo — o servidor (Vercel/Docker) pode estar em UTC e o texto vai para a família. */
 export function formatarDiaExtenso(valor: ISODateTime | Date | null | undefined): string {
   const d = paraDate(valor);
-  return d ? format(d, "EEEE, dd 'de' MMMM", { locale: ptBR }) : "";
+  if (!d) return "";
+  // Intl devolve "segunda-feira, 14 de setembro"
+  return fmtBR(d, { weekday: "long", day: "2-digit", month: "long" });
 }
 
 /** "18/09/2026" */
 export function formatarData(valor: ISODateTime | Date | null | undefined): string {
   const d = paraDate(valor);
-  return d ? format(d, "dd/MM/yyyy", { locale: ptBR }) : "";
+  return d ? fmtBR(d, { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 }
 
 /** "14:30" */
 export function formatarHora(valor: ISODateTime | Date | null | undefined): string {
   const d = paraDate(valor);
-  return d ? format(d, "HH:mm", { locale: ptBR }) : "";
+  return d ? fmtBR(d, { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
 }
 
 /** "R$ 1.180,00" */

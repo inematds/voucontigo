@@ -12,6 +12,7 @@ import {
 } from "@/components/painel/ui";
 import FormCliente from "@/components/painel/form-cliente";
 import FormAcompanhado from "@/components/painel/form-acompanhado";
+import TimelineCliente from "@/components/painel/timeline-cliente";
 import {
   exigirPerfil,
   lerConfigNumerica,
@@ -275,6 +276,8 @@ export default async function ClientePage({
             </ul>
           )}
         </Card>
+
+        <TimelineCliente clienteId={cliente.id} />
 
         <Card titulo="Dados do cliente">
           <FormCliente

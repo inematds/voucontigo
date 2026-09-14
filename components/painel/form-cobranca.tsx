@@ -112,6 +112,16 @@ export default function FormCobranca({
 
       <Input id="descricao" name="descricao" label="Descrição" />
 
+      <label className="mb-4 flex items-center gap-2 text-sm text-vc-texto/80">
+        <input
+          type="checkbox"
+          name="gerar_asaas"
+          defaultChecked
+          className="size-4 accent-vc-verde"
+        />
+        Gerar PIX no Asaas (QR + copia-e-cola) — só para o meio PIX
+      </label>
+
       <div className="flex gap-2">
         <Submeter />
         <Button

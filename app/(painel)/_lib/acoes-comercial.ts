@@ -6,6 +6,12 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { exigirGestora, exigirPerfil, registrarEvento } from "./dados";
 import { reaisParaCentavos } from "./dominio-local";
+import {
+  enviarCobranca,
+  gerarCobrancaPix,
+  lerPagamento,
+  type CanalCobranca,
+} from "@/lib/asaas/cobranca";
 
 export type Estado = { erro?: string; ok?: string };
 
@@ -133,9 +139,11 @@ export async function criarCobranca(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: criado, error } = await supabase
     .from("pagamento")
-    .insert({ ...parsed.data, status: "pendente" });
+    .insert({ ...parsed.data, status: "pendente" })
+    .select("id")
+    .single();
 
   if (error) return { erro: `Não foi possível criar: ${error.message}` };
 
@@ -145,8 +153,23 @@ export async function criarCobranca(
     payload: { valor_centavos: parsed.data.valor_centavos },
   });
 
+  let aviso = "";
+  if (formData.get("gerar_asaas") === "on" && parsed.data.meio === "pix") {
+    const cliente = await clienteParaAsaas(parsed.data.cliente_id);
+    if (cliente) {
+      const r = await gerarCobrancaPix({
+        cliente,
+        pagamentoId: criado.id,
+        valorCentavos: parsed.data.valor_centavos,
+        vencimento: parsed.data.vencimento ?? new Date().toISOString().slice(0, 10),
+        descricao: parsed.data.descricao,
+      });
+      aviso = r.ok ? " PIX do Asaas gerado." : ` Mas o PIX falhou: ${r.erro ?? "erro"}.`;
+    }
+  }
+
   revalidatePath("/painel/financeiro");
-  return { ok: "Cobrança criada." };
+  return { ok: `Cobrança criada.${aviso}` };
 }
 
 export async function marcarPago(formData: FormData): Promise<void> {
@@ -325,4 +348,80 @@ export async function salvarAcompanhante(
 
   revalidatePath("/painel/configuracoes");
   return { ok: id ? "Acompanhante atualizada." : "Acompanhante cadastrada." };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cobrança PIX via Asaas (v2)                                                 */
+/* -------------------------------------------------------------------------- */
+
+async function clienteParaAsaas(id: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cliente")
+    .select("id, nome, whatsapp, email, cpf")
+    .eq("id", id)
+    .maybeSingle<{
+      id: string;
+      nome: string;
+      whatsapp: string;
+      email: string | null;
+      cpf: string | null;
+    }>();
+  return data ?? null;
+}
+
+/** Gera (ou reaproveita) a cobrança PIX no Asaas para um pagamento já existente. */
+export async function gerarPixAsaas(formData: FormData): Promise<void> {
+  await exigirPerfil();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { data: pag } = await supabase
+    .from("pagamento")
+    .select("id, cliente_id, valor_centavos, vencimento, descricao, pacote_id, atendimento_id")
+    .eq("id", id)
+    .maybeSingle<{
+      id: string;
+      cliente_id: string;
+      valor_centavos: number;
+      vencimento: string | null;
+      descricao: string | null;
+      pacote_id: string | null;
+      atendimento_id: string | null;
+    }>();
+  if (!pag) return;
+
+  const cliente = await clienteParaAsaas(pag.cliente_id);
+  if (!cliente) return;
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const r = await gerarCobrancaPix({
+    cliente,
+    pagamentoId: pag.id,
+    valorCentavos: pag.valor_centavos,
+    vencimento: pag.vencimento ?? hoje,
+    descricao: pag.descricao,
+  });
+  if (!r.ok) console.error("[asaas] gerarPixAsaas:", r.erro);
+
+  revalidatePath("/painel/financeiro");
+}
+
+/** Envia a cobrança PIX pelo canal escolhido (whatsapp | email | ambos). */
+export async function enviarCobrancaAsaas(formData: FormData): Promise<void> {
+  await exigirPerfil();
+  const id = String(formData.get("id") ?? "");
+  const bruto = String(formData.get("canal") ?? "whatsapp");
+  const canal: CanalCobranca =
+    bruto === "email" || bruto === "ambos" ? bruto : "whatsapp";
+  if (!id) return;
+
+  const pagamento = await lerPagamento(id);
+  if (!pagamento?.asaas_id) return;
+
+  const r = await enviarCobranca(pagamento, canal);
+  if (!r.ok) console.error("[asaas] enviarCobrancaAsaas:", r.erro);
+
+  revalidatePath("/painel/financeiro");
 }

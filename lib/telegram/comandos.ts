@@ -119,6 +119,16 @@ export const AJUDA = [
   "/relatorio &lt;id&gt; enviado — marca como enviado à família",
   "/saldo &lt;nome do cliente&gt; — pacotes ativos e horas restantes",
   "/lead — leads novos sem contato",
+  "",
+  "<b>Solicitações e conversas</b>",
+  "/solicitacoes — pendentes, com botões ✅ Aprovar / ✏️ Ajustar / ❌ Recusar",
+  "/conversas — quem está aguardando atendimento humano",
+  "/responder &lt;whatsapp&gt; &lt;texto&gt; — responde pelo WhatsApp",
+  "/liberar &lt;whatsapp&gt; — devolve a conversa para o bot",
+  "",
+  "<b>Resumos</b>",
+  "/resumo — panorama de hoje",
+  "/financeiro — dinheiro da última semana",
 ].join("\n");
 
 export async function cmdAjuda(ctx: CtxLike) {

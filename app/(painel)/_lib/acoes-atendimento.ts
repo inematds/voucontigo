@@ -8,11 +8,74 @@ import type { Atendimento, StatusAtendimento } from "@/lib/domain/types";
 import { exigirPerfil, lerConfigNumerica, registrarEvento } from "./dados";
 import {
   calcularHorasAtendimento,
+  calcularTaxaCancelamento,
   calcularValorAvulso,
   reaisParaCentavos,
 } from "./dominio-local";
+import {
+  descreverRaio,
+  enviarAoCliente,
+  enviarConfirmacaoAgendamento,
+  enviarRelatorioAutomatico,
+  verificarRaio,
+  type ResultadoRaio,
+} from "@/lib/automacao";
+import { renderTemplate } from "@/lib/domain/templates";
 
 export type Estado = { erro?: string; ok?: string };
+
+/** Nunca deixa a automação derrubar uma ação do painel. */
+async function semQuebrar<T>(fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (e) {
+    console.error("[automacao] falha silenciosa:", e);
+    return null;
+  }
+}
+
+/**
+ * Checkbox "enviar automaticamente" (default LIGADO):
+ * ausente = ligado (formulário legado); "0"/"false"/"nao" = desligado.
+ */
+function envioAutomaticoLigado(formData: FormData): boolean {
+  const valores = formData.getAll("enviar_relatorio_automatico");
+  if (valores.length === 0) return true;
+  const ultimo = String(valores[valores.length - 1]).trim().toLowerCase();
+  return !["0", "false", "nao", "não", "off"].includes(ultimo);
+}
+
+/** Verifica o raio e registra o aviso no histórico do atendimento. */
+async function registrarAvisoRaio(
+  atendimentoId: string,
+  clienteId: string,
+  enderecoDestino: string,
+): Promise<void> {
+  const r = await semQuebrar(() => verificarRaio(enderecoDestino));
+  if (!r) return;
+  await registrarEvento({
+    tipo: "atendimento.raio",
+    atendimento_id: atendimentoId,
+    cliente_id: clienteId,
+    payload: { ...r, aviso: descreverRaio(r), endereco: enderecoDestino },
+  });
+}
+
+/**
+ * Consulta de raio para o formulário (aviso em tela, não bloqueia).
+ * Exportada como server action para `components/painel/form-atendimento.tsx`.
+ */
+export async function verificarRaioDestino(
+  enderecoDestino: string,
+): Promise<ResultadoRaio & { aviso: string }> {
+  await exigirPerfil();
+  const vazio: ResultadoRaio = { dentro: null, distancia_km: null, raio_km: 0 };
+  if (!enderecoDestino || enderecoDestino.trim().length < 3) {
+    return { ...vazio, aviso: "" };
+  }
+  const r = (await semQuebrar(() => verificarRaio(enderecoDestino))) ?? vazio;
+  return { ...r, aviso: descreverRaio(r) };
+}
 
 const TIPOS = [
   "consulta",
@@ -91,6 +154,10 @@ export async function criarAtendimento(
     payload: { data: parsed.data.data, hora: parsed.data.hora_prevista_inicio },
   });
 
+  // Regras automáticas (§7.2): raio + confirmação ao cliente. Nunca bloqueiam.
+  await registrarAvisoRaio(data.id, parsed.data.cliente_id, parsed.data.endereco_destino);
+  await semQuebrar(() => enviarConfirmacaoAgendamento(data.id));
+
   revalidatePath("/painel");
   revalidatePath("/painel/agenda");
   redirect(`/painel/atendimentos/${data.id}`);
@@ -122,6 +189,8 @@ export async function editarAtendimento(
     cliente_id: parsed.data.cliente_id,
     payload: { data: parsed.data.data, hora: parsed.data.hora_prevista_inicio },
   });
+
+  await registrarAvisoRaio(id, parsed.data.cliente_id, parsed.data.endereco_destino);
 
   revalidatePath("/painel/agenda");
   revalidatePath(`/painel/atendimentos/${id}`);
@@ -156,6 +225,10 @@ export async function mudarStatus(formData: FormData): Promise<void> {
     atendimento_id: id,
     payload: { status },
   });
+
+  if (status === "agendado" || status === "confirmado") {
+    await semQuebrar(() => enviarConfirmacaoAgendamento(id));
+  }
 
   revalidatePath("/painel");
   revalidatePath("/painel/agenda");
@@ -324,7 +397,24 @@ export async function finalizarAtendimento(
   revalidatePath("/painel/agenda");
   revalidatePath("/painel/pacotes");
   revalidatePath(`/painel/atendimentos/${parsed.data.id}`);
-  return { ok: "Atendimento finalizado. Agora é só enviar o relatório." };
+
+  // Relatório automático (§7.2). Falhou? Fica em `concluido` e a gestora copia
+  // o texto à mão — a gestão já foi avisada no Telegram por lib/automacao.
+  if (!envioAutomaticoLigado(formData)) {
+    return { ok: "Atendimento finalizado. Agora é só enviar o relatório." };
+  }
+
+  const envio = await semQuebrar(() => enviarRelatorioAutomatico(parsed.data.id));
+  revalidatePath(`/painel/atendimentos/${parsed.data.id}`);
+
+  if (envio?.ok) {
+    return {
+      ok: `Atendimento finalizado e relatório enviado (${envio.canais.join(" + ")}). 💚`,
+    };
+  }
+  return {
+    ok: "Atendimento finalizado. O envio automático do relatório não saiu — confira o texto e envie manualmente.",
+  };
 }
 
 export async function cancelarAtendimento(
@@ -343,22 +433,98 @@ export async function cancelarAtendimento(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: atendimento } = await supabase
     .from("atendimento")
-    .update({ status, motivo_cancelamento: motivo })
-    .eq("id", id);
+    .select(
+      "id, cliente_id, data, hora_prevista_inicio, duracao_prevista_min, valor_extras_centavos, tipo, endereco_destino, cliente:cliente_id ( nome, whatsapp, email ), acompanhado:acompanhado_id ( nome, apelido )",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  const a = atendimento as unknown as {
+    cliente_id: string;
+    data: string;
+    hora_prevista_inicio: string;
+    duracao_prevista_min: number;
+    valor_extras_centavos: number | null;
+    cliente: { nome: string; whatsapp: string; email: string | null } | null;
+    acompanhado: { nome: string; apelido: string | null } | null;
+  } | null;
+
+  const { bruta, num: cfg } = await lerConfigNumerica();
+
+  // Taxa só quando quem cancelou foi o CLIENTE (§3 política de cancelamento).
+  const taxa =
+    status === "cancelado_cliente" && a
+      ? calcularTaxaCancelamento(
+          {
+            data: a.data,
+            hora_prevista_inicio: a.hora_prevista_inicio,
+            duracao_prevista_min: a.duracao_prevista_min,
+          },
+          cfg,
+        )
+      : 0;
+
+  const patch: Record<string, unknown> = { status, motivo_cancelamento: motivo };
+  if (status === "cancelado_cliente") {
+    patch.valor_extras_centavos = (a?.valor_extras_centavos ?? 0) + taxa;
+  }
+
+  const { error } = await supabase.from("atendimento").update(patch).eq("id", id);
   if (error) return { erro: `Não foi possível cancelar: ${error.message}` };
 
   await registrarEvento({
     tipo: "atendimento.cancelado",
     atendimento_id: id,
-    payload: { status, motivo },
+    cliente_id: a?.cliente_id ?? null,
+    payload: {
+      status,
+      motivo,
+      taxa_centavos: taxa,
+      percentual: cfg.cancelamento_taxa_percentual,
+    },
   });
+
+  // Aviso ao cliente: com taxa quando ele cancelou; sem taxa quando fomos nós.
+  if (a?.cliente) {
+    const [ano, mes, dia] = a.data.split("-");
+    const vars = {
+      nome: a.cliente.nome,
+      acompanhado: a.acompanhado?.apelido || a.acompanhado?.nome || "",
+      dia: `${dia}/${mes}`,
+      data: `${dia}/${mes}/${ano}`,
+      hora: a.hora_prevista_inicio.slice(0, 5),
+      taxa: (taxa / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+      motivo,
+    };
+    const template =
+      status === "cancelado_cliente"
+        ? bruta.template_cancelamento_confirmado?.trim() ||
+          (taxa > 0
+            ? "Oi, {nome}! Cancelamento confirmado para {dia} às {hora}. Como foi com menos antecedência do que a política prevê, fica uma taxa de {taxa}. Qualquer dúvida, é só chamar. 💚"
+            : "Oi, {nome}! Cancelamento confirmado para {dia} às {hora}, sem nenhuma taxa. Qualquer dúvida, é só chamar. 💚")
+        : bruta.template_cancelamento_operacao?.trim() ||
+          "Oi, {nome}! Precisamos cancelar o acompanhamento de {dia} às {hora}. Não há nenhuma cobrança. Já já te chamo para remarcar. 💚";
+
+    const texto = renderTemplate(template, vars);
+    // Placeholder sobrando = dado faltando; melhor não mandar nada à família.
+    if (!/\{[a-zA-Z0-9_]+\}/.test(texto)) {
+      await semQuebrar(() =>
+        enviarAoCliente(a.cliente, texto, "Cancelamento do acompanhamento"),
+      );
+    }
+  }
 
   revalidatePath("/painel");
   revalidatePath("/painel/agenda");
   revalidatePath(`/painel/atendimentos/${id}`);
-  return { ok: "Atendimento cancelado." };
+  return {
+    ok:
+      taxa > 0
+        ? `Atendimento cancelado. Taxa de cancelamento registrada: ${(taxa / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`
+        : "Atendimento cancelado.",
+  };
 }
 
 export async function salvarRelatorio(

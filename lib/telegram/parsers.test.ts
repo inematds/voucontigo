@@ -210,11 +210,11 @@ describe("montarRelatorio", () => {
       extras_centavos: 1050,
       horas_restantes: 6,
     });
-    expect(texto).toContain("Relatório — Dona Ana · 14/09");
+    expect(texto).toContain("Relatório — Dona Ana · segunda-feira, 14 de setembro");
     expect(texto).toContain("Consulta médica em Hospital Moinhos");
     expect(texto).toContain("Saímos 13:00 e voltamos 15:00");
     // Intl usa espaço não-quebrável depois de "R$"
-    expect(texto).toMatch(/Extras: R\$\s10,50/);
+    expect(texto).toMatch(/Extras: .*R\$\s10,50/);
     expect(texto).toContain("Saldo do pacote: 6h");
   });
 

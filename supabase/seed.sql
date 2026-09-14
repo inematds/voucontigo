@@ -90,3 +90,38 @@ update public.perfil
    set papel = 'gestora'
  where not exists (select 1 from public.perfil where papel = 'gestora')
    and id = (select id from public.perfil order by criado_em asc limit 1);
+
+-- =============================================================================
+-- v2.0.0 — configurações e templates novos (PLANO §7)
+-- =============================================================================
+insert into public.configuracao (chave, valor) values
+  ('horario_inicio',                    '07:00'),
+  ('horario_fim',                       '19:00'),
+  ('dias_semana',                       '1,2,3,4,5,6'),
+  ('intervalo_entre_atendimentos_min',  '60'),
+  ('slot_min',                          '30'),
+  ('renovacao_aviso_dias',              '3'),
+  ('asaas_ambiente',                    'sandbox'),
+  ('endereco_base',                     ''),
+  ('lat_base',                          ''),
+  ('lng_base',                          '')
+on conflict (chave) do nothing;
+
+insert into public.configuracao (chave, valor) values
+  ('template_horarios_livres',
+   'Oi, {nome}! Estes são os horários livres para {acompanhado}:' || chr(10) ||
+   '{lista}' || chr(10) || chr(10) ||
+   'Responda com o número do horário para agendar.'),
+
+  ('template_solicitacao_recebida',
+   'Oi, {nome}! Recebi seu pedido: {tipo} de {acompanhado} em {dia} às {hora}. ' ||
+   'Já estou conferindo a agenda e confirmo em instantes. 💚'),
+
+  ('template_cancelamento_confirmado',
+   'Oi, {nome}! O atendimento de {acompanhado} em {dia} às {hora} foi cancelado. ' ||
+   'Taxa de cancelamento: {taxa}. Qualquer coisa é só me chamar. 💚'),
+
+  ('template_renovacao_aviso',
+   'Oi, {nome}! O pacote de {acompanhado} vence em {dias} dias ({vencimento}). ' ||
+   'Quer que eu já prepare a renovação de {plano}?')
+on conflict (chave) do nothing;

@@ -22,6 +22,19 @@ import {
   responder,
   type CtxLike,
 } from "./comandos";
+import {
+  cmdConversas,
+  cmdFinanceiro,
+  cmdLiberar,
+  cmdResponder,
+  cmdResumo,
+  cmdSolicitacoes,
+  tratarCallbackConversa,
+  tratarCallbackSolicitacao,
+  RE_CALLBACK_CONVERSA,
+  RE_CALLBACK_SOLICITACAO,
+  type CtxCallback,
+} from "./comandos-v2";
 
 let instancia: Bot | null = null;
 
@@ -48,6 +61,26 @@ export function getBot(): Bot | null {
   bot.command(["relatorio", "relatório"], (ctx) => cmdRelatorio(ctx as CtxLike));
   bot.command("saldo", (ctx) => cmdSaldo(ctx as CtxLike));
   bot.command(["lead", "leads"], (ctx) => cmdLead(ctx as CtxLike));
+
+  // v2 — solicitações, conversas humanas e resumos
+  bot.command(["solicitacoes", "solicitações"], (ctx) =>
+    cmdSolicitacoes(ctx as CtxLike),
+  );
+  bot.command("conversas", (ctx) => cmdConversas(ctx as CtxLike));
+  bot.command("responder", (ctx) => cmdResponder(ctx as CtxLike));
+  bot.command("liberar", (ctx) => cmdLiberar(ctx as CtxLike));
+  bot.command("resumo", (ctx) => cmdResumo(ctx as CtxLike));
+  bot.command(["financeiro", "financas", "finanças"], (ctx) =>
+    cmdFinanceiro(ctx as CtxLike),
+  );
+
+  // Botões inline
+  bot.callbackQuery(RE_CALLBACK_SOLICITACAO, (ctx) =>
+    tratarCallbackSolicitacao(ctx as unknown as CtxCallback),
+  );
+  bot.callbackQuery(RE_CALLBACK_CONVERSA, (ctx) =>
+    tratarCallbackConversa(ctx as unknown as CtxCallback),
+  );
 
   bot.on("message:text", async (ctx) => {
     if (ctx.message.text.startsWith("/")) {

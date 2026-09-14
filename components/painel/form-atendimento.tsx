@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import {
   criarAtendimento,
   editarAtendimento,
+  verificarRaioDestino,
   type Estado,
 } from "@/app/(painel)/_lib/acoes-atendimento";
 import { Alerta, Button, Input, Select, Textarea } from "./ui";
@@ -65,6 +66,23 @@ export default function FormAtendimento({
     INICIAL,
   );
   const [clienteId, setClienteId] = useState(valores.cliente_id ?? "");
+  const [raio, setRaio] = useState<{ dentro: boolean | null; aviso: string } | null>(
+    null,
+  );
+
+  async function conferirRaio(endereco: string) {
+    const limpo = endereco.trim();
+    if (limpo.length < 3) {
+      setRaio(null);
+      return;
+    }
+    try {
+      const r = await verificarRaioDestino(limpo);
+      setRaio(r.aviso ? { dentro: r.dentro, aviso: r.aviso } : null);
+    } catch {
+      setRaio(null);
+    }
+  }
 
   const acompanhadosDoCliente = acompanhados.filter(
     (a) => a.cliente_id === clienteId,
@@ -172,7 +190,16 @@ export default function FormAtendimento({
         label="Endereço de destino"
         required
         defaultValue={valores.endereco_destino ?? ""}
+        onBlur={(e) => conferirRaio(e.target.value)}
       />
+      {raio ? (
+        <Alerta tom={raio.dentro === false ? "aviso" : "ok"}>
+          {raio.aviso}
+          {raio.dentro === false
+            ? " Você pode agendar assim mesmo — só combine o deslocamento extra."
+            : ""}
+        </Alerta>
+      ) : null}
 
       <Textarea
         id="descricao"

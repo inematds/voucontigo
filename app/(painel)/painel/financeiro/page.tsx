@@ -11,6 +11,7 @@ import {
 } from "@/components/painel/ui";
 import FormCobranca from "@/components/painel/form-cobranca";
 import BotaoCopiar from "@/components/painel/botao-copiar";
+import CobrancaPix from "@/components/painel/cobranca-pix";
 import { exigirPerfil, lerConfiguracao } from "../../_lib/dados";
 import { fmtData, hojeISO } from "../../_lib/datas";
 import {
@@ -36,6 +37,10 @@ type LinhaPagamento = {
   pago_em: string | null;
   descricao: string | null;
   criado_em: string;
+  asaas_id: string | null;
+  pix_qrcode_base64: string | null;
+  pix_copia_cola: string | null;
+  link_pagamento: string | null;
   cliente: { id: string; nome: string } | null;
 };
 
@@ -57,7 +62,7 @@ export default async function FinanceiroPage({
   let consulta = supabase
     .from("pagamento")
     .select(
-      "id, valor_centavos, meio, status, vencimento, pago_em, descricao, criado_em, cliente:cliente_id(id, nome)",
+      "id, valor_centavos, meio, status, vencimento, pago_em, descricao, criado_em, asaas_id, pix_qrcode_base64, pix_copia_cola, link_pagamento, cliente:cliente_id(id, nome)",
     )
     .order("criado_em", { ascending: false })
     .limit(100);
@@ -68,7 +73,7 @@ export default async function FinanceiroPage({
     consulta,
     supabase
       .from("pagamento")
-      .select("valor_centavos")
+      .select("valor_centavos, asaas_id")
       .eq("status", "pago")
       .gte("pago_em", `${inicioMes}T00:00:00-03:00`),
     supabase
@@ -92,7 +97,13 @@ export default async function FinanceiroPage({
 
   const soma = (linhas: { valor_centavos: number }[] | null) =>
     (linhas ?? []).reduce((s, p) => s + Number(p.valor_centavos), 0);
-  const totalMes = soma(totalMesRes.data);
+  const pagosMes = (totalMesRes.data ?? []) as unknown as {
+    valor_centavos: number;
+    asaas_id: string | null;
+  }[];
+  const totalMes = soma(pagosMes);
+  const totalMesAsaas = soma(pagosMes.filter((p) => p.asaas_id));
+  const totalMesManual = totalMes - totalMesAsaas;
   const totalPendente = soma(totalPendenteRes.data);
 
   const clientes = (cli.data ?? []) as { id: string; nome: string }[];
@@ -131,14 +142,14 @@ export default async function FinanceiroPage({
     <>
       <PageHeader
         titulo="Financeiro"
-        subtitulo="Cobranças manuais (PIX, dinheiro, cartão)."
+        subtitulo="Cobranças PIX pelo Asaas (QR + webhook) e registro manual."
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3">
         <Metrica
           rotulo="Recebido no mês"
           valor={centavosParaReais(totalMes)}
-          detalhe={`desde ${fmtData(inicioMes)}`}
+          detalhe={`Asaas ${centavosParaReais(totalMesAsaas)} · manual ${centavosParaReais(totalMesManual)}`}
         />
         <Metrica
           rotulo="Em aberto"
@@ -214,11 +225,31 @@ export default async function FinanceiroPage({
                         {p.vencimento ? ` · vence ${fmtData(p.vencimento)}` : ""}
                       </p>
                     </div>
-                    <BadgePagamento status={p.status} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      {p.asaas_id ? (
+                        <span className="rounded-full bg-vc-verde/10 px-2 py-0.5 text-[11px] font-semibold text-vc-verde">
+                          {p.status === "pago" ? "pago via Asaas" : "Asaas"}
+                        </span>
+                      ) : null}
+                      <BadgePagamento status={p.status} />
+                    </div>
                   </div>
 
+                  {p.meio === "pix" ? (
+                    <CobrancaPix
+                      pagamento={{
+                        id: p.id,
+                        asaas_id: p.asaas_id,
+                        pix_qrcode_base64: p.pix_qrcode_base64,
+                        pix_copia_cola: p.pix_copia_cola,
+                        link_pagamento: p.link_pagamento,
+                        status: p.status,
+                      }}
+                    />
+                  ) : null}
+
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {p.meio === "pix" ? (
+                    {p.meio === "pix" && !p.asaas_id ? (
                       <BotaoCopiar texto={textoPix} rotulo="Copiar cobrança PIX" />
                     ) : null}
                     {p.status === "pendente" ? (
