@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* Paleta Vou Contigo (extraída do logo) */
+:root {
+  --vc-verde: #636751;
+  --vc-verde-claro: #68725d;
+  --vc-marrom: #7a583f;
+  --vc-bege: #ddcdb4;
+  --vc-bege-escuro: #ccb99f;
+  --vc-creme: #fef9f3;
+  --vc-texto: #3b3529;
+  --background: var(--vc-creme);
+  --foreground: var(--vc-texto);
+}
+
+@theme inline {
+  --color-vc-verde: var(--vc-verde);
+  --color-vc-verde-claro: var(--vc-verde-claro);
+  --color-vc-marrom: var(--vc-marrom);
+  --color-vc-bege: var(--vc-bege);
+  --color-vc-bege-escuro: var(--vc-bege-escuro);
+  --color-vc-creme: var(--vc-creme);
+  --color-vc-texto: var(--vc-texto);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), Georgia, serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
