@@ -2,6 +2,7 @@
 
 | data | o que quebrou | menor correção | prompt \| infra |
 |---|---|---|---|
+| 2026-09-14 | `exigirPerfil` sintetizava papel `acompanhante` para usuário sem linha em `perfil`; familiar logado pelo portal entrava no painel (inbox, aprovações) via service role | sem `perfil` → redirect `/login?erro=sem_acesso`; `/entrar` envia metadata `papel=familiar` para o trigger não criar perfil | prompt |
 | 2026-09-14 | `formatarHora/formatarData` de `lib/domain/templates.ts` usavam fuso do processo; na Vercel (UTC) o relatório enviado à família sairia 3h errado | `Intl.DateTimeFormat` com `timeZone: America/Sao_Paulo` + `TZ` no Dockerfile/env | prompt |
 | 2026-09-14 | Migration 0004 chamava trigger `definir_atualizado_em()` mas a 0001 define `tocar_atualizado_em()` | corrigir o nome na 0004 | prompt |
 | 2026-09-14 | Trigger de signup dava perfil `acompanhante` a todo usuário novo; familiar do portal viraria equipe e leria a base inteira | trigger pula e-mail que já é de `cliente` ou metadata papel=familiar; `vincular_familiar` apaga perfil | prompt |

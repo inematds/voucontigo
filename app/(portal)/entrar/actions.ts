@@ -28,7 +28,11 @@ export async function enviarLinkFamiliar(
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
-    options: { emailRedirectTo: `${origem}/entrar/callback` },
+    options: {
+      emailRedirectTo: `${origem}/entrar/callback`,
+      // O trigger de signup NÃO cria `perfil` (equipe) para quem entra com este papel.
+      data: { papel: "familiar" },
+    },
   });
   if (error) return { erro: "Não conseguimos enviar o link agora. Tente de novo em instantes." };
 

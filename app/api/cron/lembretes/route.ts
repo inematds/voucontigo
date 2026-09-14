@@ -14,6 +14,8 @@ import { enviarResumoDiario, enviarResumoFinanceiroSeSegunda } from "@/lib/teleg
 import { cronAutorizado, respostaJson } from "@/lib/telegram/cron";
 import { dataSP, ddmm, diaSemana, escapeHtml, idCurto, renderTemplate, somarDias } from "@/lib/telegram/_local";
 import { enviarHorariosLivresSemanal, enviarLembretesD1 } from "@/lib/automacao";
+import { calcularSlotsLivres } from "@/lib/domain/agendamento";
+import { parseConfigAgenda } from "@/lib/whatsapp/_compat";
 import { TIPO_ATENDIMENTO_LABEL, type TipoAtendimento } from "@/lib/domain/types";
 
 export const runtime = "nodejs";
@@ -147,10 +149,30 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   // 6. horários livres da semana (só segunda) --------------------------------
-  const semanal =
-    diaSemana(hoje) === "segunda"
-      ? await enviarHorariosLivresSemanal(hoje)
-      : { ativo: false, enviados: 0, pulados: 0, falhas: 0 };
+  let semanal: Awaited<ReturnType<typeof enviarHorariosLivresSemanal>> = {
+    ativo: false,
+    enviados: 0,
+    pulados: 0,
+    falhas: 0,
+  };
+  if (diaSemana(hoje) === "segunda") {
+    // slots livres dos próximos 7 dias, com a agenda real e a config do painel
+    const ate = somarDias(hoje, 7);
+    const { data: ocupadosRaw } = await db.rpc("horarios_ocupados", { p_de: hoje, p_ate: ate });
+    const ocupados = ((ocupadosRaw ?? []) as { data: string; hora_inicio: string; duracao_min: number }[]).map(
+      (o) => ({ data: o.data, hora: String(o.hora_inicio).slice(0, 5), duracao_min: o.duracao_min }),
+    );
+    const { data: cfgRows } = await db.from("configuracao").select("chave, valor");
+    const slots = calcularSlotsLivres({
+      de: hoje,
+      ate,
+      duracao_min: 120,
+      ocupados,
+      config: parseConfigAgenda(cfgRows ?? []),
+      limite: 8,
+    });
+    semanal = await enviarHorariosLivresSemanal(hoje, slots);
+  }
   if (semanal.ativo) {
     blocos.push(
       `🗓️ <b>Horários livres da semana</b>\nEnviados: ${semanal.enviados} · pulados: ${semanal.pulados} · falhas: ${semanal.falhas}`,

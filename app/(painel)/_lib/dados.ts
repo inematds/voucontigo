@@ -20,13 +20,9 @@ export async function exigirPerfil(): Promise<{
     .eq("id", user.id)
     .maybeSingle();
 
-  const perfil: Perfil = (data as Perfil | null) ?? {
-    id: user.id,
-    nome: user.email ?? "Usuária",
-    papel: "acompanhante",
-    telegram_chat_id: null,
-    criado_em: new Date().toISOString(),
-  };
+  // Sem linha em `perfil` = não é equipe (ex.: familiar logado pelo portal). Não sintetizar papel.
+  if (!data) redirect("/login?erro=sem_acesso");
+  const perfil = data as Perfil;
 
   return { perfil, email: user.email ?? null };
 }
